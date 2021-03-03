@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="
+               http://www.springframework.org/schema/beans
+               http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+               http://camel.apache.org/schema/spring
+               http://camel.apache.org/schema/spring/camel-spring.xsd
+               http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:property-placeholder location="classpath:application.properties"/>
+
+    <bean id="db"  class="camel.DB"
+          init-method="initDB" destroy-method="destroyDB">
+        <property name="url" value="${DB.url}"/>
+        <property name="user" value="${DB.user}"/>
+        <property name="password" value="${DB.password}"/>
+    </bean>
+
+    <bean id="btmConfig" factory-method="getConfiguration"
+          class="bitronix.tm.TransactionManagerServices">
+        <property name="serverId" value="btmServer"/>
+        <property name="logPart1Filename" value="./src/main/resources/tx-logs/part1.btm"/>
+        <property name="logPart2Filename" value="./src/main/resources/tx-logs/part2.btm"/>
+    </bean>
+
+    <bean id="bitronixTransactionManager" factory-method="getTransactionManager"
+          class="bitronix.tm.TransactionManagerServices"
+          depends-on="btmConfig" destroy-method="shutdown" />
+
+    <bean id="transactionManager"
+          class="org.springframework.transaction.jta.JtaTransactionManager">
+        <property name="transactionManager" ref="bitronixTransactionManager" />
+        <property name="userTransaction" ref="bitronixTransactionManager" />
+    </bean>
+
+    <bean id="jmsXaConnectionFactory"
+          class="bitronix.tm.resource.jms.PoolingConnectionFactory"
+          init-method="init" destroy-method="close" >
+        <property name="className"
+                  value="org.apache.activemq.ActiveMQXAConnectionFactory" />
+        <property name="uniqueName" value="jms" />
+        <property name="maxPoolSize" value="100" />
+        <property name="minPoolSize" value="1" />
+        <property name="allowLocalTransactions" value="false" />
+        <property name="driverProperties">
+            <props>
+                <prop key="brokerURL">${activemq.brokerUrl}</prop>
+            </props>
+        </property>
+    </bean>
+
+     <bean id="jmslistenerContainer"
+          class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+        <property name="connectionFactory" ref="jmsXaConnectionFactory"/>
+        <property name="destinationName" value="${activemq.destination}"/>
+        <property name="messageListener" ref="JmsMessageListener"/>
+        <property name="transactionManager" ref="transactionManager" />
+    </bean>
+
+    <bean id="JmsMessageListener" class="camel.JmsMessageListener" />
+
+    <camelContext id="camelContext" xmlns="http://camel.apache.org/schema/spring">
+        <routeBuilder ref="myRouteBuilder"/>
+    </camelContext>
+
+    <bean id="myRouteBuilder" class="camel.myRouteBuilder"  >
+        <property name="db" ref="db" />
+    </bean>
+
+    <bean id="poolingDataSource" class="bitronix.tm.resource.jdbc.PoolingDataSource"
+          init-method="init" destroy-method="close">
+        <property name="ClassName" value="org.postgresql.xa.PGXADataSource"/>
+        <property name="UniqueName" value="postgres" />
+        <property name="MaxPoolSize" value="5" />
+        <property name="MinPoolSize" value="1" />
+        <property name="AutomaticEnlistingEnabled" value="false" />
+        <property name="DriverProperties">
+            <props>
+                <prop key="user">${DB.user}</prop>
+                <prop key="password">${DB.password}</prop>
+                <prop key="serverName">${DB.serverName}</prop>
+                <prop key="portNumber">${DB.portNumber}</prop>
+                <prop key="databaseName">${DB.databaseName}</prop>
+            </props>
+        </property>
+    </bean>
+
+</beans>
