@@ -1,13 +1,13 @@
 package camel;
 
 import org.apache.camel.Exchange;
+import org.apache.camel.Message;
 import org.apache.camel.Processor;
 import org.apache.camel.spring.SpringRouteBuilder;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Random;
-
 
 public class myRouteBuilder extends SpringRouteBuilder {
 
@@ -20,6 +20,7 @@ public class myRouteBuilder extends SpringRouteBuilder {
     public DB getDb() { return db; }
 
     public void setDb(DB db) { this.db = db; }
+    SimpleDateFormat formater = new SimpleDateFormat("HH:mm:ss,SSS");
 
     public void configure() {
 
@@ -32,7 +33,7 @@ public class myRouteBuilder extends SpringRouteBuilder {
                     public void process(Exchange exchange) throws Exception {
                         numberXmlFiles++;
                         numberAllFiles++;
-                        checkNumberAllFiles(numberAllFiles);
+                        checkNumberAllFiles(numberAllFiles,exchange);
                         log.info("Received XML file №"
                                 + numberXmlFiles + " :"
                                 + exchange.getIn()
@@ -45,7 +46,7 @@ public class myRouteBuilder extends SpringRouteBuilder {
                     public void process(Exchange exchange) throws Exception {
                         numberTxtFiles++;
                         numberAllFiles++;
-                        checkNumberAllFiles(numberAllFiles);
+                        checkNumberAllFiles(numberAllFiles, exchange);
                         log.info("Received TXT file №"
                                 + numberTxtFiles +" :"
                                 + exchange.getIn()
@@ -59,23 +60,30 @@ public class myRouteBuilder extends SpringRouteBuilder {
                     public void process(Exchange exchange) throws Exception {
                         numberBadFiles++;
                         numberAllFiles++;
-                        checkNumberAllFiles(numberAllFiles);
-                        log.info("Received bad file №"
+                        checkNumberAllFiles(numberAllFiles, exchange);
+                        log.info("Received invalid file №"
                                 + numberBadFiles + " :"
                                 + exchange.getIn()
                                 .getHeader("CamelFileName"));
                     }
-                });
+                })
+                .end()
+                .choice()
+                .when(header("to").isNotNull())
+                .to("smtps://smtp.gmail.com:465?username=yourEmail@gmail.com&password=yourPassword")
+                .end();
     }
 
-    public void checkNumberAllFiles(int numberAllFiles) {
-        if(numberAllFiles==100) log.info("--------Recieved 100 files!---------");
+    public void checkNumberAllFiles(int numberAllFiles, Exchange exchange) {
+        if(numberAllFiles==100) {
+            log.info("--------Recieved 100 files!---------") ;
+            sendMail(exchange);
+        }
     }
 
     public void insertTxtFileIntoDB(Exchange exchange) {
         int text_id = new Random().nextInt();
         String resultMessage = exchange.getIn().getBody(String.class);
-        SimpleDateFormat formater = new SimpleDateFormat("HH:mm:ss,SSS");
         String time = formater.format(new Date());
         try {
             db.insertFields1(text_id, resultMessage, time);
@@ -84,4 +92,20 @@ public class myRouteBuilder extends SpringRouteBuilder {
             log.error("Exception: {}", e);
         }
     }
+
+    private void sendMail(Exchange exchange) {
+
+        StringBuilder messageBody = new StringBuilder();
+        messageBody.append("./src/data contains " + String.valueOf(numberAllFiles)
+                + " files. Current time=" + formater.format(new Date()) + "\n");
+        messageBody.append(String.valueOf(numberXmlFiles++) + " XML files\n");
+        messageBody.append(String.valueOf(numberTxtFiles++) + " TXT files\n");
+        messageBody.append(String.valueOf(numberBadFiles++) + " invalid files\n");
+        Message message = exchange.getOut();
+        message.setHeader("to", "yourEmaildas@gmail.com");
+        message.setHeader("subject", "Files from ./src/data");
+        message.setBody(messageBody.toString());
+    }
+
+
 }

@@ -107,6 +107,11 @@
 			<version>3.8.0</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-mail</artifactId>
+			<version>3.8.0</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.apache.activemq</groupId>
