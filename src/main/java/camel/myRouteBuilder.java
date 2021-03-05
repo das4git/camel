@@ -98,14 +98,12 @@ public class myRouteBuilder extends SpringRouteBuilder {
         StringBuilder messageBody = new StringBuilder();
         messageBody.append("./src/data contains " + String.valueOf(numberAllFiles)
                 + " files. Current time=" + formater.format(new Date()) + "\n");
-        messageBody.append(String.valueOf(numberXmlFiles++) + " XML files\n");
-        messageBody.append(String.valueOf(numberTxtFiles++) + " TXT files\n");
-        messageBody.append(String.valueOf(numberBadFiles++) + " invalid files\n");
+        messageBody.append(String.valueOf(numberXmlFiles) + " XML files\n");
+        messageBody.append(String.valueOf(numberTxtFiles) + " TXT files\n");
+        messageBody.append(String.valueOf(numberBadFiles) + " invalid files\n");
         Message message = exchange.getOut();
         message.setHeader("to", "yourEmaildas@gmail.com");
         message.setHeader("subject", "Files from ./src/data");
         message.setBody(messageBody.toString());
     }
-
-
 }
