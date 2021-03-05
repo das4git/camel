@@ -89,7 +89,7 @@ public class myRouteBuilder extends SpringRouteBuilder {
             db.insertFields1(text_id, resultMessage, time);
             log.info("TXT file inserted into DB");
         } catch (SQLException e) {
-            log.error("Exception:  {}", e);
+            log.error("Exception: {}", e);
         }
     }
 
