@@ -4,9 +4,9 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.example</groupId>
-	<artifactId>activemq</artifactId>
+	<artifactId>camel</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>activemq</name>
+	<name>camel</name>
 	<description>project</description>
 
 
